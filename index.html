@@ -7,7 +7,7 @@
     <title>轮滑计时器</title>
     <style>
         @font-face {
-            font-family: 'DIGITAL';
+            font-family: 'Digital-7';
             src: url('digir___.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
@@ -37,8 +37,6 @@
 
         .timer {
             width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -48,12 +46,12 @@
             font-size: 18px;
             font-weight: bold;
             color: #000;
-            flex: 1;
+            flex: 0 0 35%;
             text-align: right;
         }
 
         .timer-display-container {
-            flex: 4;
+            flex: 1;
             background-color: #000;
             border-radius: 8px;
             padding: 10px;
@@ -63,7 +61,7 @@
         }
 
         .timer-display {
-            font-family: 'DIGITAL', monospace;
+            font-family: 'Digital-7', monospace;
             font-size: 48px;
             color: #ff3333;
             transition: all 0.3s;
@@ -163,13 +161,6 @@
             background-color: #9c27b0;
             color: white;
             margin-top: 15px;
-            width: 100%;
-        }
-
-        #sync-time-btn {
-            background-color: #4da6ff;
-            color: white;
-            margin-top: 10px;
             width: 100%;
         }
 
@@ -288,7 +279,6 @@
         </div>
     </div>
     <button id="connect-btn">蓝牙连接</button>
-    <button id="sync-time-btn">发送时间</button>
     <button id="debug-btn">显示调试按钮</button>
     <div id="console"></div>
 
@@ -353,7 +343,6 @@
         const btnGroup1 = document.getElementById('btn-group-1');
         const btnGroup2 = document.getElementById('btn-group-2');
         const pageTitle = document.getElementById('page-title');
-        const syncTimeBtn = document.getElementById('sync-time-btn');
 
         // 训练模式按钮文本
         const TRAIN_MODE_TEXTS = ['START', 'MID1', 'MID2', 'TOTAL'];
@@ -450,20 +439,6 @@
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-        }
-
-        // 发送时间同步命令
-        function sendTimeSync() {
-            if (!isBluetoothConnected()) {
-                logToConsole('蓝牙未连接，无法发送时间同步命令');
-                return;
-            }
-            
-            const timestamp = Date.now();
-            const command = `timesync:${timestamp}`;
-            
-            sendBluetoothCommand(command);
-            logToConsole(`发送时间同步命令: ${command}`);
         }
 
         // 检查是否有有效成绩
@@ -970,4 +945,29 @@
         // 翻页按钮事件绑定
         navBtns.first.addEventListener('click', () => navigatePage(-Math.min(currentPage, 10))); // 向前翻最多10条
         navBtns.prev.addEventListener('click', () => navigatePage(-1)); // 向前翻1条
-        navBtns.next.addEventListener
+        navBtns.next.addEventListener('click', () => navigatePage(1)); // 向后翻1条
+        navBtns.last.addEventListener('click', () => navigatePage(Math.min(results.length - 1 - currentPage, 10))); // 向后翻最多10条
+
+        // 绑定计时按钮事件
+        for (let i = 0; i < 4; i++) {
+            timerBtns[i].addEventListener('click', () => handleTimerBtnClick(i));
+        }
+
+        connectBtn.addEventListener('click', connectBluetooth);
+        debugBtn.addEventListener('click', toggleDebugMode);
+
+        // 页面加载时初始化
+        window.onload = () => {
+            if (!navigator.bluetooth) {
+                logToConsole('您的浏览器不支持 Web Bluetooth API');
+                connectBtn.disabled = true;
+            }
+            
+            // 初始化模式显示和计时器标签
+            updateModeDisplay();
+            updateTimerLabels();
+            updatePageInfo();
+            
+            // 默认隐藏前两排按钮
+            btnGroup1.classList.add('hidden');
+            btnGroup2.classList.add('hidden');
