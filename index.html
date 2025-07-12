@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>轮滑计时器</title>
     <style>
+        @font-face {
+            font-family: 'DigitalDream';
+            src: url('digitaldream.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -17,9 +24,8 @@
         }
 
         h1 {
-            font-size: 24px;
+            font-size: 28px;
             margin-bottom: 10px;
-            color: #333;
         }
 
         .timer-group {
@@ -51,13 +57,13 @@
         .timer-number {
             font-size: 18px;
             font-weight: bold;
-            color: #fff;
+            color: #000;
             margin-bottom: 5px;
             text-align: center;
         }
 
         .timer-display {
-            font-family: 'Courier New', monospace, 'Digital-7', 'DS-Digital';
+            font-family: 'DigitalDream', monospace;
             font-size: 48px;
             color: #ff3333;
             transition: all 0.3s;
@@ -80,7 +86,6 @@
             font-size: 24px;
             margin: 15px 0;
             font-weight: bold;
-            color: #333;
         }
 
         .btn-group {
@@ -162,10 +167,7 @@
         }
 
         #connection-status {
-            margin-top: 5px;
-            font-size: 16px;
-            padding: 5px;
-            border-radius: 5px;
+            display: none;
         }
 
         #console {
@@ -222,7 +224,7 @@
 </head>
 
 <body>
-    <h1>轮滑计时器</h1>
+    <h1 id="page-title">轮滑计时器</h1>
     <div class="timer-group">
         <div class="timer">
             <div class="timer-number" id="timer-label-1">当前计时</div>
@@ -263,10 +265,10 @@
         <button class="timer-btn" id="timer-btn-4">TOTAL</button>
     </div>
     <div class="btn-group">
-        <button class="nav-btn" id="btn-page-first">《</button>
-        <button class="nav-btn" id="btn-page-prev">‹</button>
-        <button class="nav-btn" id="btn-page-next">›</button>
-        <button class="nav-btn" id="btn-page-last">》</button>
+        <button class="nav-btn" id="btn-page-first"><<</button>
+        <button class="nav-btn" id="btn-page-prev"><</button>
+        <button class="nav-btn" id="btn-page-next">></button>
+        <button class="nav-btn" id="btn-page-last">>></button>
     </div>
     <div class="page-info">
         <span id="page-info">第 1 条 / 共 0 条</span>
@@ -279,7 +281,6 @@
         </div>
     </div>
     <button id="connect-btn">蓝牙连接</button>
-    <div id="connection-status">未连接</div>
     <button id="debug-btn">显示调试按钮</button>
     <div id="console"></div>
 
@@ -343,6 +344,7 @@
         const debugBtn = document.getElementById('debug-btn');
         const btnGroup1 = document.getElementById('btn-group-1');
         const btnGroup2 = document.getElementById('btn-group-2');
+        const pageTitle = document.getElementById('page-title');
 
         // 训练模式按钮文本
         const TRAIN_MODE_TEXTS = ['START', 'MID1', 'MID2', 'TOTAL'];
@@ -353,6 +355,15 @@
         const TRAIN_MODE_LABELS = ['当前计时', '分段1时间', '分段2时间', '最终时间'];
         // 决赛模式计时器标签
         const FINAL_MODE_LABELS = ['选手1时间', '选手2时间', '选手3时间', '选手4时间'];
+
+        // 更新页面标题颜色
+        function updatePageTitleColor() {
+            if (isBluetoothConnected()) {
+                pageTitle.style.color = '#4da6ff';
+            } else {
+                pageTitle.style.color = '#333';
+            }
+        }
 
         // 日志打印函数
         function logToConsole(text) {
@@ -584,8 +595,6 @@
 
             try {
                 logToConsole('正在请求蓝牙设备...');
-                connectionStatus.textContent = '正在连接...';
-                connectionStatus.style.color = 'blue';
 
                 bleDevice = await navigator.bluetooth.requestDevice({
                     filters: [{ services: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] }],
@@ -593,9 +602,10 @@
                 });
 
                 logToConsole(`已选择设备: ${bleDevice.name}`);
-                connectionStatus.textContent = `已连接: ${bleDevice.name}`;
-                connectionStatus.style.color = 'green';
                 connectBtn.textContent = '断开蓝牙';
+                
+                // 添加断开连接事件监听
+                bleDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
 
                 bleServer = await bleDevice.gatt.connect();
                 logToConsole('已连接到 GATT 服务器');
@@ -608,27 +618,51 @@
                 await txCharacteristic.startNotifications();
                 txCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
                 logToConsole('已启用通知');
+                
+                // 更新页面标题颜色
+                updatePageTitleColor();
             } catch (error) {
                 logToConsole(`蓝牙连接错误: ${error}`);
-                connectionStatus.textContent = '未连接';
-                connectionStatus.style.color = 'red';
                 connectBtn.textContent = '蓝牙连接';
+                
+                // 更新页面标题颜色
+                updatePageTitleColor();
             }
+        }
+
+        // 蓝牙断开连接处理
+        function onBluetoothDisconnected() {
+            logToConsole('蓝牙连接已断开');
+            connectBtn.textContent = '蓝牙连接';
+            
+            // 重置蓝牙相关变量
+            bleDevice = null;
+            bleServer = null;
+            txCharacteristic = null;
+            rxCharacteristic = null;
+            
+            // 更新页面标题颜色
+            updatePageTitleColor();
         }
 
         // 断开蓝牙连接
         function disconnectBluetooth() {
             if (bleDevice && bleDevice.gatt.connected) {
+                // 移除事件监听
+                bleDevice.removeEventListener('gattserverdisconnected', onBluetoothDisconnected);
+                
                 bleDevice.gatt.disconnect();
                 logToConsole('已断开蓝牙连接');
-                connectionStatus.textContent = '未连接';
-                connectionStatus.style.color = 'red';
                 connectBtn.textContent = '蓝牙连接';
 
+                // 重置蓝牙相关变量
                 bleDevice = null;
                 bleServer = null;
                 txCharacteristic = null;
                 rxCharacteristic = null;
+                
+                // 更新页面标题颜色
+                updatePageTitleColor();
             }
         }
 
@@ -929,8 +963,6 @@
             if (!navigator.bluetooth) {
                 logToConsole('您的浏览器不支持 Web Bluetooth API');
                 connectBtn.disabled = true;
-                connectionStatus.textContent = '蓝牙不可用';
-                connectionStatus.style.color = 'red';
             }
             
             // 初始化模式显示和计时器标签
@@ -941,6 +973,9 @@
             // 默认隐藏前两排按钮
             btnGroup1.classList.add('hidden');
             btnGroup2.classList.add('hidden');
+            
+            // 初始化页面标题颜色
+            updatePageTitleColor();
         };
     </script>
 </body>
