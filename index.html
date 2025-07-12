@@ -6,10 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>轮滑计时器</title>
     <style>
+        @font-face {
+            font-family: 'Digital-7';
+            src: url('https://fonts.cdnfonts.com/css/digital-7-mono');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #fff;
+            background-color: #f8f9fa;
             margin: 0;
             padding: 20px;
             max-width: 600px;
@@ -19,6 +26,7 @@
         h1 {
             font-size: 24px;
             margin-bottom: 10px;
+            color: #333;
         }
 
         .timer-group {
@@ -30,34 +38,42 @@
 
         .timer {
             width: 100%;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 10px;
+            padding: 10px;
             box-sizing: border-box;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            background-color: #f9f9f9;
+        }
+
+        .timer-display-container {
+            width: 100%;
+            background-color: #000;
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 3px solid #888;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3) inset;
         }
 
         .timer-number {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             color: #333;
-            width: 30%;
-            text-align: left;
+            margin-bottom: 5px;
+            text-align: center;
         }
 
         .timer-display {
-            font-size: 42px;
-            color: red;
+            font-family: 'Digital-7', monospace;
+            font-size: 48px;
+            color: #ff3333;
             transition: all 0.3s;
-            width: 70%;
-            text-align: right;
+            text-align: center;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(255, 51, 51, 0.7);
         }
 
         .timer-display.flash {
-            font-weight: bold;
             animation: flash 1s infinite;
         }
 
@@ -71,8 +87,7 @@
             font-size: 24px;
             margin: 15px 0;
             font-weight: bold;
-            padding: 10px;
-            border-radius: 5px;
+            color: #333;
         }
 
         .btn-group {
@@ -99,8 +114,14 @@
             border-radius: 8px;
             cursor: pointer;
             flex: 1;
-            min-width: 100px;
+            min-width: 0;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         #reset-btn {
@@ -165,6 +186,7 @@
             box-sizing: border-box;
             margin-top: 20px;
             font-size: 14px;
+            background-color: #f9f9f9;
         }
 
         #results-display {
@@ -175,6 +197,7 @@
             margin: 15px 0;
             text-align: left;
             box-sizing: border-box;
+            background-color: #fff;
         }
 
         .result-item {
@@ -189,13 +212,11 @@
         }
 
         .train-mode {
-            color: #fff;
-            background-color: #4CAF50;
+            color: #4CAF50;
         }
 
         .final-mode {
-            color: #fff;
-            background-color: #ff3333;
+            color: #ff3333;
         }
 
         .page-info {
@@ -212,19 +233,27 @@
     <div class="timer-group">
         <div class="timer">
             <div class="timer-number" id="timer-label-1">当前计时</div>
-            <div class="timer-display" id="timer-1">00:00.000</div>
+            <div class="timer-display-container">
+                <div class="timer-display" id="timer-1">00:00.000</div>
+            </div>
         </div>
         <div class="timer">
             <div class="timer-number" id="timer-label-2">分段1时间</div>
-            <div class="timer-display" id="timer-2">00:00.000</div>
+            <div class="timer-display-container">
+                <div class="timer-display" id="timer-2">00:00.000</div>
+            </div>
         </div>
         <div class="timer">
             <div class="timer-number" id="timer-label-3">分段2时间</div>
-            <div class="timer-display" id="timer-3">00:00.000</div>
+            <div class="timer-display-container">
+                <div class="timer-display" id="timer-3">00:00.000</div>
+            </div>
         </div>
         <div class="timer">
             <div class="timer-number" id="timer-label-4">最终时间</div>
-            <div class="timer-display" id="timer-4">00:00.000</div>
+            <div class="timer-display-container">
+                <div class="timer-display" id="timer-4">00:00.000</div>
+            </div>
         </div>
     </div>
     <div id="mode-display" class="train-mode">当前模式: 训练</div>
@@ -410,8 +439,24 @@
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
         }
 
+        // 检查是否有有效成绩
+        function hasValidResult() {
+            if (currentMode === 'train') {
+                // 训练模式：至少有一个非零时间
+                return finalTimes.some(time => time !== null && time > 0);
+            } else {
+                // 决赛模式：至少有一个选手有时间
+                return finalTimes.some(time => time !== null && time > 0);
+            }
+        }
+
         // 记录当前成绩
         function recordResult() {
+            if (!hasValidResult()) {
+                logToConsole("无有效成绩，不记录");
+                return;
+            }
+            
             const now = Date.now();
             // 复制当前计时器的最终时间
             const currentTimes = [...finalTimes];
@@ -792,8 +837,13 @@
             if (currentMode === "train") {
                 // 训练模式：对应start, mid1, mid2, total
                 if (index === 0) {
-                    // 训练模式下开始按钮不执行任何操作
-                    logToConsole("训练模式下开始按钮禁用");
+                    // 训练模式下START按钮启动计时
+                    if (isAnyTimerRunning) {
+                        logToConsole("已有计时器在运行");
+                        return;
+                    }
+                    startTimer(0);
+                    sendBluetoothCommand("start");
                 } else if (index === 1) {
                     handleCommand("mid1");
                     sendBluetoothCommand("mid1");
@@ -809,9 +859,6 @@
                         // 将时钟1的时间同步到时钟4
                         timerDisplays[3].textContent = timerDisplays[0].textContent;
                         finalTimes[3] = finalTimes[0];
-                        
-                        // 重置时钟1
-                        resetTimer(0);
                     }
                     
                     // 发送rank命令并记录成绩
@@ -866,7 +913,7 @@
                 highlightFastestTimer();
             }
             
-            // 记录成绩
+            // 记录成绩（检查是否有有效成绩）
             recordResult();
         });
 
