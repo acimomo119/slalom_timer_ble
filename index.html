@@ -7,8 +7,8 @@
     <title>轮滑计时器</title>
     <style>
         @font-face {
-            font-family: 'DigitalDream';
-            src: url('digireu_.ttf') format('truetype');
+            font-family: 'DIGITAL';
+            src: url('digir___.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -40,12 +40,20 @@
             padding: 10px;
             box-sizing: border-box;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            gap: 10px;
+        }
+
+        .timer-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+            flex: 1;
+            text-align: right;
         }
 
         .timer-display-container {
-            width: 100%;
+            flex: 4;
             background-color: #000;
             border-radius: 8px;
             padding: 10px;
@@ -54,16 +62,8 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3) inset;
         }
 
-        .timer-number {
-            font-size: 18px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
         .timer-display {
-            font-family: 'DigitalDream', monospace;
+            font-family: 'DIGITAL', monospace;
             font-size: 48px;
             color: #ff3333;
             transition: all 0.3s;
@@ -166,6 +166,13 @@
             width: 100%;
         }
 
+        #sync-time-btn {
+            background-color: #4da6ff;
+            color: white;
+            margin-top: 10px;
+            width: 100%;
+        }
+
         #connection-status {
             display: none;
         }
@@ -219,48 +226,6 @@
             margin: 10px 0;
             color: #666;
             font-size: 16px;
-        }
-
-        #ntp-time-container {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #e9ecef;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        #ntp-time-label {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        #ntp-time {
-            font-family: 'DigitalDream', monospace;
-            font-size: 28px;
-            color: #000;
-        }
-
-        #ntp-btn-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        #ntp-btn-group button {
-            flex: 1;
-            padding: 15px 0;
-        }
-
-        #get-time-btn {
-            background-color: #fff;
-            color: #333;
-            border: 1px solid #ccc;
-        }
-
-        #send-time-btn {
-            background-color: #4da6ff;
-            color: #fff;
         }
     </style>
 </head>
@@ -323,18 +288,8 @@
         </div>
     </div>
     <button id="connect-btn">蓝牙连接</button>
+    <button id="sync-time-btn">发送时间</button>
     <button id="debug-btn">显示调试按钮</button>
-    
-    <!-- NTP时间相关元素 -->
-    <div id="ntp-time-container">
-        <div id="ntp-time-label">系统时间</div>
-        <div id="ntp-time">--:--:--</div>
-    </div>
-    <div id="ntp-btn-group">
-        <button id="get-time-btn">获取时间</button>
-        <button id="send-time-btn">发送时间</button>
-    </div>
-    
     <div id="console"></div>
 
     <script>
@@ -358,11 +313,6 @@
         
         // 调试模式
         let debugMode = false;
-        
-        // NTP时间相关变量
-        let ntpTimeOffset = 0; // NTP时间与本地时间的偏移量
-        let ntpTimeInterval = null; // NTP时间更新间隔
-        let isNtpTimeRunning = false; // NTP时间是否在运行
         
         // DOM 元素获取
         const timerDisplays = [
@@ -403,10 +353,7 @@
         const btnGroup1 = document.getElementById('btn-group-1');
         const btnGroup2 = document.getElementById('btn-group-2');
         const pageTitle = document.getElementById('page-title');
-        const ntpTimeContainer = document.getElementById('ntp-time-container');
-        const ntpTimeElement = document.getElementById('ntp-time');
-        const getTimeBtn = document.getElementById('get-time-btn');
-        const sendTimeBtn = document.getElementById('send-time-btn');
+        const syncTimeBtn = document.getElementById('sync-time-btn');
 
         // 训练模式按钮文本
         const TRAIN_MODE_TEXTS = ['START', 'MID1', 'MID2', 'TOTAL'];
@@ -505,10 +452,18 @@
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
         }
 
-        // 格式化时间为hh:mm:ss
-        function formatTimeSimple(timestamp) {
-            const date = new Date(timestamp);
-            return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+        // 发送时间同步命令
+        function sendTimeSync() {
+            if (!isBluetoothConnected()) {
+                logToConsole('蓝牙未连接，无法发送时间同步命令');
+                return;
+            }
+            
+            const timestamp = Date.now();
+            const command = `timesync:${timestamp}`;
+            
+            sendBluetoothCommand(command);
+            logToConsole(`发送时间同步命令: ${command}`);
         }
 
         // 检查是否有有效成绩
@@ -963,4 +918,56 @@
             } else {
                 // 决赛模式：对应p1-p4
                 const command = `p${index + 1}`;
-                handleCommand(command
+                handleCommand(command);
+                sendBluetoothCommand(command);
+            }
+        }
+
+        // 按钮点击事件绑定
+        resetBtn.addEventListener('click', () => {
+            resetAllTimersCompletely();
+            sendBluetoothCommand('reset');
+        });
+
+        modeBtn.addEventListener('click', () => {
+            // 切换模式并重置所有计时器，发送reset命令
+            currentMode = currentMode === "train" ? "final" : "train";
+            resetAllTimersCompletely();
+            updateModeDisplay();
+            updateTimerBtnTexts();
+            updateTimerLabels(); // 新增：更新计时器标签
+            sendBluetoothCommand(currentMode);
+            sendBluetoothCommand("reset");
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (currentMode === "final") {
+                // 决赛模式：蓝牙连接时发送startfinal，未连接时执行start命令
+                if (isBluetoothConnected()) {
+                    sendBluetoothCommand('startfinal');
+                } else {
+                    handleCommand('start');
+                }
+            } else {
+                // 训练模式：开始按钮不执行任何操作
+                logToConsole("训练模式下开始按钮禁用");
+            }
+        });
+
+        resultBtn.addEventListener('click', () => {
+            resetActiveTimers();  // 只重置正在进行的计时器
+            sendBluetoothCommand('rank');
+            
+            // 决赛模式下高亮显示最快的计时器
+            if (currentMode === 'final') {
+                highlightFastestTimer();
+            }
+            
+            // 记录成绩（检查是否有有效成绩）
+            recordResult();
+        });
+
+        // 翻页按钮事件绑定
+        navBtns.first.addEventListener('click', () => navigatePage(-Math.min(currentPage, 10))); // 向前翻最多10条
+        navBtns.prev.addEventListener('click', () => navigatePage(-1)); // 向前翻1条
+        navBtns.next.addEventListener
