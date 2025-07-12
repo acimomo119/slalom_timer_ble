@@ -366,10 +366,10 @@
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
         }
 
-        // 格式化时间戳为hh:mm:ss
+        // 格式化时间戳为yyyy-MM-dd hh:mm:ss
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
-            return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
         }
 
         // 记录当前成绩
@@ -553,6 +553,11 @@
             }
         }
 
+        // 检查蓝牙连接状态
+        function isBluetoothConnected() {
+            return bleDevice && bleDevice.gatt.connected;
+        }
+
         // 处理蓝牙通知
         function handleNotifications(event) {
             const value = event.target.value;
@@ -688,6 +693,7 @@
                     const now = Date.now();
                     const elapsed = now - startTimes[0];
                     timerDisplays[1].textContent = formatTime(elapsed);
+                    finalTimes[1] = elapsed; // 保存分段1时间
                 }
                 
             } else if (command === "mid2") {
@@ -696,6 +702,7 @@
                     const now = Date.now();
                     const elapsed = now - startTimes[0];
                     timerDisplays[2].textContent = formatTime(elapsed);
+                    finalTimes[2] = elapsed; // 保存分段2时间
                 }
                 
             } else if (command === "train" || command === "final") {
@@ -741,10 +748,12 @@
         // 计时按钮点击处理
         function handleTimerBtnClick(index) {
             if (currentMode === "train") {
-                // 训练模式：对应start, mid1, mid2, stop
+                // 训练模式：对应start, mid1, mid2, total
                 if (index === 0) {
                     handleCommand("start");
-                    sendBluetoothCommand("start");
+                    if (isBluetoothConnected()) {
+                        sendBluetoothCommand("start");
+                    }
                 } else if (index === 1) {
                     handleCommand("mid1");
                     sendBluetoothCommand("mid1");
@@ -752,8 +761,11 @@
                     handleCommand("mid2");
                     sendBluetoothCommand("mid2");
                 } else if (index === 3) {
-                    handleCommand("stop");
-                    sendBluetoothCommand("stop");
+                    // 训练模式下按下TOTAL按钮时，执行rank命令
+                    resetActiveTimers();
+                    sendBluetoothCommand("rank");
+                    highlightFastestTimer();
+                    recordResult();
                 }
             } else {
                 // 决赛模式：对应p1-p4
@@ -770,17 +782,30 @@
         });
 
         modeBtn.addEventListener('click', () => {
-            // 切换模式并重置所有计时器
+            // 切换模式并重置所有计时器，发送reset命令
             currentMode = currentMode === "train" ? "final" : "train";
             resetAllTimersCompletely();
             updateModeDisplay();
             updateTimerBtnTexts();
             sendBluetoothCommand(currentMode);
+            sendBluetoothCommand("reset"); // 新增：切换模式时发送reset命令
         });
 
         startBtn.addEventListener('click', () => {
-            // 修改：只发送startfinal命令，不执行本地start逻辑
-            sendBluetoothCommand('startfinal');
+            if (currentMode === "final") {
+                // 决赛模式：蓝牙连接时发送startfinal，未连接时执行start命令
+                if (isBluetoothConnected()) {
+                    sendBluetoothCommand('startfinal');
+                } else {
+                    handleCommand('start');
+                }
+            } else {
+                // 训练模式：始终执行start命令
+                handleCommand('start');
+                if (isBluetoothConnected()) {
+                    sendBluetoothCommand('start');
+                }
+            }
         });
 
         resultBtn.addEventListener('click', () => {
