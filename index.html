@@ -23,15 +23,16 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
+            gap: 2%;
             margin: 20px 0;
         }
 
         .timer {
-            min-width: 150px;
+            width: 23%;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
+            box-sizing: border-box;
         }
 
         .timer-number {
@@ -41,7 +42,7 @@
         }
 
         .timer-display {
-            font-size: 32px;
+            font-size: 36px;
             color: red;
             transition: all 0.3s;
         }
@@ -191,20 +192,20 @@
     <h1>轮滑计时器</h1>
     <div class="timer-group">
         <div class="timer">
-            <div class="timer-number">计时器 1</div>
-            <div class="timer-display" id="timer-1">00:00:00.000</div>
+            <div class="timer-number" id="timer-label-1">当前计时</div>
+            <div class="timer-display" id="timer-1">00:00.000</div>
         </div>
         <div class="timer">
-            <div class="timer-number">计时器 2</div>
-            <div class="timer-display" id="timer-2">00:00:00.000</div>
+            <div class="timer-number" id="timer-label-2">分段1时间</div>
+            <div class="timer-display" id="timer-2">00:00.000</div>
         </div>
         <div class="timer">
-            <div class="timer-number">计时器 3</div>
-            <div class="timer-display" id="timer-3">00:00:00.000</div>
+            <div class="timer-number" id="timer-label-3">分段2时间</div>
+            <div class="timer-display" id="timer-3">00:00.000</div>
         </div>
         <div class="timer">
-            <div class="timer-number">计时器 4</div>
-            <div class="timer-display" id="timer-4">00:00:00.000</div>
+            <div class="timer-number" id="timer-label-4">最终时间</div>
+            <div class="timer-display" id="timer-4">00:00.000</div>
         </div>
     </div>
     <div id="mode-display" class="train-mode">当前模式: 训练</div>
@@ -270,6 +271,12 @@
             document.getElementById('timer-3'),
             document.getElementById('timer-4')
         ];
+        const timerLabels = [
+            document.getElementById('timer-label-1'),
+            document.getElementById('timer-label-2'),
+            document.getElementById('timer-label-3'),
+            document.getElementById('timer-label-4')
+        ];
         const modeDisplay = document.getElementById('mode-display');
         const resetBtn = document.getElementById('reset-btn');
         const modeBtn = document.getElementById('mode-btn');
@@ -300,6 +307,11 @@
         const TRAIN_MODE_TEXTS = ['START', 'MID1', 'MID2', 'TOTAL'];
         // 决赛模式按钮文本
         const FINAL_MODE_TEXTS = ['P1', 'P2', 'P3', 'P4'];
+        
+        // 训练模式计时器标签
+        const TRAIN_MODE_LABELS = ['当前计时', '分段1时间', '分段2时间', '最终时间'];
+        // 决赛模式计时器标签
+        const FINAL_MODE_LABELS = ['选手1时间', '选手2时间', '选手3时间', '选手4时间'];
 
         // 日志打印函数
         function logToConsole(text) {
@@ -314,6 +326,14 @@
             const texts = currentMode === 'train' ? TRAIN_MODE_TEXTS : FINAL_MODE_TEXTS;
             for (let i = 0; i < 4; i++) {
                 timerBtns[i].textContent = texts[i];
+            }
+        }
+
+        // 更新计时器标签
+        function updateTimerLabels() {
+            const labels = currentMode === 'train' ? TRAIN_MODE_LABELS : FINAL_MODE_LABELS;
+            for (let i = 0; i < 4; i++) {
+                timerLabels[i].textContent = labels[i];
             }
         }
 
@@ -354,16 +374,15 @@
             }
         }
 
-        // 格式化时间显示（保留3位毫秒）
+        // 格式化时间显示（保留3位毫秒，格式：mm:ss.000）
         function formatTime(milliseconds) {
-            if (milliseconds === null) return '00:00:00.000';
+            if (milliseconds === null) return '00:00.000';
             
-            const hours = Math.floor(milliseconds / 3600000);
-            const minutes = Math.floor((milliseconds % 3600000) / 60000);
+            const minutes = Math.floor(milliseconds / 60000);
             const seconds = Math.floor((milliseconds % 60000) / 1000);
             const ms = milliseconds % 1000;
             
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
         }
 
         // 格式化时间戳为yyyy-MM-dd hh:mm:ss
@@ -430,6 +449,9 @@
                 }
                 if (result.times[2] > 0) {
                     scoresHtml += `<div>分段2: ${formatTime(result.times[2])}</div>`;
+                }
+                if (result.times[3] > 0) {
+                    scoresHtml += `<div>最终时间: ${formatTime(result.times[3])}</div>`;
                 }
             } else {
                 // 决赛模式：选手1-4
@@ -635,7 +657,7 @@
             timerIntervals[index] = null;
             startTimes[index] = 0;
             finalTimes[index] = null;
-            timerDisplays[index].textContent = '00:00:00.000';
+            timerDisplays[index].textContent = '00:00.000';
         }
 
         // 重置所有计时器（完全重置）
@@ -711,6 +733,7 @@
                 resetAllTimersCompletely();
                 updateModeDisplay();
                 updateTimerBtnTexts();
+                updateTimerLabels(); // 新增：更新计时器标签
                 
             } else if (command.startsWith("p")) {
                 // p1-p4：对应时钟固定停止计时
@@ -750,10 +773,8 @@
             if (currentMode === "train") {
                 // 训练模式：对应start, mid1, mid2, total
                 if (index === 0) {
-                    handleCommand("start");
-                    if (isBluetoothConnected()) {
-                        sendBluetoothCommand("start");
-                    }
+                    // 训练模式下开始按钮不执行任何操作
+                    logToConsole("训练模式下开始按钮禁用");
                 } else if (index === 1) {
                     handleCommand("mid1");
                     sendBluetoothCommand("mid1");
@@ -761,10 +782,21 @@
                     handleCommand("mid2");
                     sendBluetoothCommand("mid2");
                 } else if (index === 3) {
-                    // 训练模式下按下TOTAL按钮时，执行rank命令
-                    resetActiveTimers();
+                    // 训练模式下按下TOTAL按钮时的处理
+                    if (timerIntervals[0] !== null) {
+                        // 停止时钟1
+                        stopTimer(0);
+                        
+                        // 将时钟1的时间同步到时钟4
+                        timerDisplays[3].textContent = timerDisplays[0].textContent;
+                        finalTimes[3] = finalTimes[0];
+                        
+                        // 重置时钟1
+                        resetTimer(0);
+                    }
+                    
+                    // 发送rank命令并记录成绩
                     sendBluetoothCommand("rank");
-                    highlightFastestTimer();
                     recordResult();
                 }
             } else {
@@ -787,8 +819,9 @@
             resetAllTimersCompletely();
             updateModeDisplay();
             updateTimerBtnTexts();
+            updateTimerLabels(); // 新增：更新计时器标签
             sendBluetoothCommand(currentMode);
-            sendBluetoothCommand("reset"); // 新增：切换模式时发送reset命令
+            sendBluetoothCommand("reset");
         });
 
         startBtn.addEventListener('click', () => {
@@ -800,11 +833,8 @@
                     handleCommand('start');
                 }
             } else {
-                // 训练模式：始终执行start命令
-                handleCommand('start');
-                if (isBluetoothConnected()) {
-                    sendBluetoothCommand('start');
-                }
+                // 训练模式：开始按钮不执行任何操作
+                logToConsole("训练模式下开始按钮禁用");
             }
         });
 
@@ -844,8 +874,9 @@
                 connectionStatus.style.color = 'red';
             }
             
-            // 初始化模式显示
+            // 初始化模式显示和计时器标签
             updateModeDisplay();
+            updateTimerLabels();
             updatePageInfo();
             
             // 默认隐藏前两排按钮
