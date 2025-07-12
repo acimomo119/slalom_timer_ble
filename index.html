@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>轮滑计时器</title>
     <style>
         body {
@@ -12,6 +12,8 @@
             background-color: #fff;
             margin: 0;
             padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         h1 {
@@ -21,30 +23,37 @@
 
         .timer-group {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 2%;
+            flex-direction: column;
+            gap: 15px;
             margin: 20px 0;
         }
 
         .timer {
-            width: 23%;
-            padding: 10px;
+            width: 100%;
+            padding: 15px;
             border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 10px;
             box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f9f9f9;
         }
 
         .timer-number {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
-            margin-bottom: 5px;
+            color: #333;
+            width: 30%;
+            text-align: left;
         }
 
         .timer-display {
-            font-size: 36px;
+            font-size: 42px;
             color: red;
             transition: all 0.3s;
+            width: 70%;
+            text-align: right;
         }
 
         .timer-display.flash {
@@ -62,6 +71,8 @@
             font-size: 24px;
             margin: 15px 0;
             font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
         }
 
         .btn-group {
@@ -82,13 +93,14 @@
         }
 
         button {
-            padding: 10px 15px;
-            font-size: 16px;
+            padding: 15px 10px;
+            font-size: 18px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             flex: 1;
-            max-width: 150px;
+            min-width: 100px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         #reset-btn {
@@ -125,17 +137,21 @@
             background-color: #4CAF50;
             color: white;
             margin-top: 10px;
+            width: 100%;
         }
 
         #debug-btn {
             background-color: #9c27b0;
             color: white;
             margin-top: 15px;
+            width: 100%;
         }
 
         #connection-status {
             margin-top: 5px;
-            font-size: 14px;
+            font-size: 16px;
+            padding: 5px;
+            border-radius: 5px;
         }
 
         #console {
@@ -148,6 +164,7 @@
             overflow-y: scroll;
             box-sizing: border-box;
             margin-top: 20px;
+            font-size: 14px;
         }
 
         #results-display {
@@ -172,18 +189,20 @@
         }
 
         .train-mode {
-            color: green;
+            color: #fff;
+            background-color: #4CAF50;
         }
 
         .final-mode {
-            color: red;
+            color: #fff;
+            background-color: #ff3333;
         }
 
         .page-info {
             text-align: center;
             margin: 10px 0;
             color: #666;
-            font-size: 14px;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -440,7 +459,7 @@
             let scoresHtml = '';
             
             if (result.mode === 'train') {
-                // 训练模式：总成绩（时钟1）、分段1（时钟2）、分段2（时钟3）
+                // 训练模式：总成绩（时钟1）、分段1（时钟2）、分段2（时钟3）、最终时间（时钟4）
                 if (result.times[0] > 0) {
                     scoresHtml += `<div>总成绩: ${formatTime(result.times[0])}</div>`;
                 }
