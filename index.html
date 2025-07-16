@@ -297,6 +297,7 @@
         let finalTimes = [null, null, null, null]; // 4个计时器的最终时间
         let currentMode = "train"; // train:训练  final:决赛
         let isAnyTimerRunning = false; // 标记是否有计时器在运行
+        let mid1Time = null; // 新增：保存mid1的时间点
         
         // 成绩记录相关变量
         let results = []; // 成绩数组，最多100条
@@ -756,6 +757,7 @@
             for (let i = 0; i < 4; i++) {
                 resetTimer(i);
             }
+            mid1Time = null; // 新增：重置mid1时间点
             isAnyTimerRunning = false;
             clearFlashEffects();
         }
@@ -786,6 +788,10 @@
                 resetAllTimersCompletely();
                 if (currentMode === "train") {
                     startTimer(0);
+                    // 确保其他时钟显示为00:00.000
+                    timerDisplays[1].textContent = '00:00.000';
+                    timerDisplays[2].textContent = '00:00.000';
+                    timerDisplays[3].textContent = '00:00.000';
                 } else {
                     for (let i = 0; i < 4; i++) {
                         startTimer(i);
@@ -801,21 +807,22 @@
                 resetAllTimersCompletely();
                 
             } else if (command === "mid1") {
-                // 时钟2固定显示当前时钟1时间
+                // 时钟2固定显示当前时钟1时间（start到mid1的时间）
                 if (timerIntervals[0] !== null) { // 只在时钟1正在计时时执行
                     const now = Date.now();
                     const elapsed = now - startTimes[0];
                     timerDisplays[1].textContent = formatTime(elapsed);
                     finalTimes[1] = elapsed; // 保存分段1时间
+                    mid1Time = now; // 新增：保存mid1的时间点
                 }
                 
             } else if (command === "mid2") {
-                // 时钟3固定显示当前时钟1时间
-                if (timerIntervals[0] !== null) { // 只在时钟1正在计时时执行
+                // 修改：时钟3显示mid1到mid2的时间
+                if (timerIntervals[0] !== null && mid1Time !== null) { // 只在时钟1正在计时且已记录mid1时执行
                     const now = Date.now();
-                    const elapsed = now - startTimes[0];
-                    timerDisplays[2].textContent = formatTime(elapsed);
-                    finalTimes[2] = elapsed; // 保存分段2时间
+                    const elapsedFromMid1 = now - mid1Time; // 计算mid2与mid1的差值
+                    timerDisplays[2].textContent = formatTime(elapsedFromMid1);
+                    finalTimes[2] = elapsedFromMid1; // 保存分段2时间（mid1到mid2）
                 }
                 
             } else if (command === "train" || command === "final") {
@@ -824,7 +831,8 @@
                 resetAllTimersCompletely();
                 updateModeDisplay();
                 updateTimerBtnTexts();
-                updateTimerLabels(); // 新增：更新计时器标签
+                updateTimerLabels();
+                mid1Time = null; // 新增：重置mid1时间点
                 
             } else if (command.startsWith("p")) {
                 // p1-p4：对应时钟固定停止计时
@@ -912,7 +920,8 @@
             resetAllTimersCompletely();
             updateModeDisplay();
             updateTimerBtnTexts();
-            updateTimerLabels(); // 新增：更新计时器标签
+            updateTimerLabels();
+            mid1Time = null; // 新增：重置mid1时间点
             sendBluetoothCommand(currentMode);
             sendBluetoothCommand("reset");
         });
@@ -926,8 +935,13 @@
                     handleCommand('start');
                 }
             } else {
-                // 训练模式：开始按钮不执行任何操作
-                logToConsole("训练模式下开始按钮禁用");
+                // 训练模式：开始按钮启动计时
+                if (isAnyTimerRunning) {
+                    logToConsole("已有计时器在运行");
+                    return;
+                }
+                startTimer(0);
+                sendBluetoothCommand("start");
             }
         });
 
@@ -979,5 +993,4 @@
         };
     </script>
 </body>
-
 </html>
